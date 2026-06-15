@@ -8,6 +8,7 @@ content/ 패키지의 페이지 정의를 읽어 정적 HTML을 생성한다.
   - sitemap.xml 에는 index 허용 페이지만 포함
   - 지역+역+테마 조합 경로는 생성 자체가 불가능한 구조
 """
+import datetime
 import html
 import os
 import re
@@ -144,6 +145,7 @@ def render_page(page: dict) -> str:
 <meta name="description" content="{desc}">
 {robots}
 <link rel="canonical" href="{canonical}">
+<link rel="alternate" type="application/rss+xml" title="{BRAND} 매거진" href="{BASE_URL.rstrip('/')}/rss.xml">
 <meta property="og:type" content="website">
 <meta property="og:title" content="{title}">
 <meta property="og:description" content="{desc}">
@@ -253,6 +255,11 @@ def render_page(page: dict) -> str:
 def build() -> None:
     report = []
     sitemap_urls = []
+    article_pages = []  # 매거진 글 (RSS 피드용)
+    base = BASE_URL.rstrip("/")
+    now = datetime.datetime.now(datetime.timezone.utc)
+    today = now.strftime("%Y-%m-%d")
+    rfc822 = now.strftime("%a, %d %b %Y %H:%M:%S +0000")
 
     for page in PAGES:
         path = page["path"]  # "" 또는 "ansan/sangnok/bono-dong-chuljangmassage/" 형태
@@ -265,12 +272,14 @@ def build() -> None:
         chars = text_length(page["body"])
         noindex = page.get("noindex", False) or chars < MIN_INDEX_CHARS
         if not noindex:
-            sitemap_urls.append(BASE_URL.rstrip("/") + "/" + path)
+            sitemap_urls.append(base + "/" + path)
+            if path.startswith("magazine/") and path != "magazine/":
+                article_pages.append(page)
         report.append((path or "/", chars, "noindex" if noindex else "index"))
 
-    # sitemap.xml
+    # sitemap.xml (lastmod 포함)
     urls = "\n".join(
-        f"  <url><loc>{u}</loc></url>" for u in sitemap_urls
+        f"  <url><loc>{u}</loc><lastmod>{today}</lastmod></url>" for u in sitemap_urls
     )
     with open(os.path.join(ROOT, "sitemap.xml"), "w", encoding="utf-8") as f:
         f.write(
@@ -279,11 +288,39 @@ def build() -> None:
             f"{urls}\n</urlset>\n"
         )
 
+    # rss.xml — 매거진 글 피드 (네이버/구글 콘텐츠 발견 가속)
+    items = []
+    for page in article_pages:
+        link = base + "/" + page["path"]
+        items.append(
+            "    <item>\n"
+            f"      <title>{html.escape(page['title'])}</title>\n"
+            f"      <link>{link}</link>\n"
+            f"      <guid isPermaLink=\"true\">{link}</guid>\n"
+            f"      <description>{html.escape(page['desc'])}</description>\n"
+            f"      <pubDate>{rfc822}</pubDate>\n"
+            "    </item>"
+        )
+    with open(os.path.join(ROOT, "rss.xml"), "w", encoding="utf-8") as f:
+        f.write(
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n'
+            "  <channel>\n"
+            f"    <title>{html.escape(BRAND)} 매거진</title>\n"
+            f"    <link>{base}/magazine/</link>\n"
+            f"    <atom:link href=\"{base}/rss.xml\" rel=\"self\" type=\"application/rss+xml\"/>\n"
+            "    <description>안산 출장마사지·홈타이 매거진 — 방문 관리 가이드와 읽을거리</description>\n"
+            "    <language>ko</language>\n"
+            f"    <lastBuildDate>{rfc822}</lastBuildDate>\n"
+            + "\n".join(items) + "\n"
+            "  </channel>\n</rss>\n"
+        )
+
     # robots.txt
     with open(os.path.join(ROOT, "robots.txt"), "w", encoding="utf-8") as f:
         f.write(
             "User-agent: *\nAllow: /\n\n"
-            f"Sitemap: {BASE_URL.rstrip('/')}/sitemap.xml\n"
+            f"Sitemap: {base}/sitemap.xml\n"
         )
 
     # .nojekyll (GitHub Pages)
@@ -294,7 +331,8 @@ def build() -> None:
     for p, c, r in sorted(report):
         flag = "" if (r == "noindex" or MIN_INDEX_CHARS <= c <= 2500) else "  ⚠"
         print(f"{p.ljust(width)}  {str(c).rjust(5)}  {r}{flag}")
-    print(f"\n{len(report)} pages built, {len(sitemap_urls)} in sitemap.")
+    print(f"\n{len(report)} pages built, {len(sitemap_urls)} in sitemap, "
+          f"{len(article_pages)} in rss.xml.")
 
 
 if __name__ == "__main__":

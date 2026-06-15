@@ -75,3 +75,41 @@ python3 build.py
 3. Google Search Console / 네이버 서치어드바이저에 `sitemap.xml` 제출
 4. `assets/og-image.png`, `icon-*.png`, `apple-touch-icon.png` 등 래스터 브랜드 이미지는
    간다GO 로고로 교체 (현재 SVG 파비콘은 브랜드 중립 다이아몬드 마크로 교체됨)
+
+## 검색엔진 색인 (빠른 인덱싱)
+
+### 소유확인·맵 파일 (빌드/커밋에 포함, 사이트 루트 제공)
+- `sitemap.xml` — 색인 허용 페이지 전체 + `lastmod` (build.py 자동 생성)
+- `rss.xml` — 매거진 글 피드 (네이버 서치어드바이저 RSS 제출용, build.py 자동 생성)
+- `robots.txt` — `Sitemap:` 라인 포함
+- `naver1bcd5202285eb31a097868b6f346d95c.html` — 네이버 HTML 소유확인
+- 메인 페이지 `<head>` 의 `naver-site-verification` 메타태그 (메타 방식 병행)
+- `127898ad5d2ed878af4659f45774aba9.txt` — IndexNow 키 파일
+
+> 최초 1회: 네이버 서치어드바이저·구글 Search Console 에 사이트 등록 후
+> `sitemap.xml` 과 (네이버) `rss.xml` 을 제출. 이후 색인 통보는 아래 자동화가 처리.
+
+### IndexNow — 빙·네이버 즉시 색인 통보
+```bash
+python3 tools/indexnow.py --all        # sitemap 전체 제출
+python3 tools/indexnow.py --changed    # 직전 커밋 대비 변경 페이지만
+python3 tools/indexnow.py <URL> ...    # 지정 URL
+```
+키는 `content/site.py` 의 `INDEXNOW_KEY`, 키 파일은 루트의 `{KEY}.txt`. 둘이 일치해야 한다.
+(구글은 IndexNow 미참여)
+
+### Google Indexing API (선택, 보조 수단)
+```bash
+GOOGLE_SA_JSON='{서비스계정 키 JSON}' python3 tools/google_indexing.py --changed
+```
+- 서비스 계정에 Indexing API 권한 + Search Console 소유자 등록 필요
+- 공식 지원 대상은 JobPosting/BroadcastEvent — 일반 페이지는 sitemap 제출이 정석
+
+> 참고: 구글·빙의 비인증 `sitemap ping` 엔드포인트는 폐지되어 지원하지 않는다.
+> 일반 페이지 색인은 ① Search Console sitemap 제출 + ② IndexNow(빙·네이버)가 가장 빠른 경로.
+
+### 자동화 — 글 올릴 때마다 즉시 통보
+`.github/workflows/index-notify.yml` 가 **프로덕션 브랜치(main) 푸시** 시 변경 URL을
+IndexNow(빙·네이버)에 자동 통보한다. `GOOGLE_SA_JSON` 시크릿을 등록하면 구글에도 통보.
+- 워크플로의 `branches: [main]` 을 Cloudflare Pages 의 프로덕션 브랜치와 일치시킬 것
+- 수동 실행(`workflow_dispatch`)으로 `all`/`changed` 선택 가능

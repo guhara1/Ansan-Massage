@@ -1,0 +1,48 @@
+name: 색인 통보 (IndexNow + Google)
+
+# 글을 올리거나 페이지를 수정해 프로덕션 브랜치에 푸시하면,
+# 변경된 URL을 빙·네이버(IndexNow)와 구글(Indexing API, 선택)에 즉시 통보한다.
+# Cloudflare Pages 가 같은 푸시로 배포되므로, 통보 시점에 URL이 곧 라이브가 된다.
+
+on:
+  push:
+    branches: [main]          # 프로덕션 배포 브랜치 (Cloudflare Pages 와 일치시킬 것)
+    paths:
+      - "**/index.html"
+      - "sitemap.xml"
+      - "rss.xml"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "통보 범위"
+        type: choice
+        options: [changed, all]
+        default: changed
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2        # --changed 의 git diff HEAD~1 용
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: 통보 범위 결정
+        id: mode
+        run: echo "mode=${{ github.event.inputs.mode || 'changed' }}" >> "$GITHUB_OUTPUT"
+
+      - name: IndexNow 통보 (빙·네이버)
+        run: python3 tools/indexnow.py --${{ steps.mode.outputs.mode }}
+
+      - name: Google Indexing API 통보 (서비스 계정 시크릿 있을 때만)
+        env:
+          GOOGLE_SA_JSON: ${{ secrets.GOOGLE_SA_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SA_JSON" ]; then
+            pip install --quiet google-auth requests
+          fi
+          python3 tools/google_indexing.py --${{ steps.mode.outputs.mode }}

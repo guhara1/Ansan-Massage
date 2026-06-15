@@ -2,6 +2,10 @@
 # 배포 도메인 확정 후 BASE_URL 을 실제 도메인으로 변경하세요.
 BASE_URL = "https://ansan-massage.pages.dev"
 
+# IndexNow (빙·네이버 즉시 색인 통보)용 설정.
+# 키 파일은 사이트 루트에 {INDEXNOW_KEY}.txt 로 존재해야 한다.
+INDEXNOW_KEY = "127898ad5d2ed878af4659f45774aba9"
+
 BRAND = "간다GO"
 PHONE = "0508-202-4719"
 PHONE_DISPLAY = "0508-202-4719"
