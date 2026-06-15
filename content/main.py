@@ -2,6 +2,9 @@
 from .site import BASE_URL, BRAND, PHONE, PHONE_DISPLAY
 from .pricing import PRICING
 
+# 네이버 서치어드바이저 사이트 소유확인 메타태그 (메인 페이지에만 삽입)
+_NAVER = '<meta name="naver-site-verification" content="10ea6afce82c35f36193a7c0e14c3d6e8e9c7e67" />\n'
+
 _JSONLD = f"""<script type="application/ld+json">
 {{
   "@context": "https://schema.org",
@@ -250,7 +253,7 @@ PAGE = {
     "desc": "안산 출장마사지·홈타이 예약 전 상록구, 단원구, 역세권 정보를 정리했습니다.",
     "h1": "안산 출장마사지·홈타이 예약 안내",
     "body": _BODY,
-    "extra_head": _JSONLD,
+    "extra_head": _NAVER + _JSONLD,
     "breadcrumb": [],
     "hero": _HERO,
 }
