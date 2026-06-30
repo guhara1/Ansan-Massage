@@ -2,11 +2,11 @@ name: 색인 통보 (IndexNow + Google)
 
 # 글을 올리거나 페이지를 수정해 프로덕션 브랜치에 푸시하면,
 # 변경된 URL을 빙·네이버(IndexNow)와 구글(Indexing API, 선택)에 즉시 통보한다.
-# Cloudflare Pages 가 같은 푸시로 배포되므로, 통보 시점에 URL이 곧 라이브가 된다.
+# Netlify 가 같은 푸시로 배포되므로, 통보 시점에 URL이 곧 라이브가 된다.
 
 on:
   push:
-    branches: [main]          # 프로덕션 배포 브랜치 (Cloudflare Pages 와 일치시킬 것)
+    branches: [claude/beautiful-feynman-gffmek]   # 프로덕션 배포 브랜치 (Netlify 프로덕션 브랜치와 일치)
     paths:
       - "**/index.html"
       - "sitemap.xml"

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://ansan-massage.pages.dev/sitemap.xml
+Sitemap: https://ansan-massage.netlify.app/sitemap.xml
